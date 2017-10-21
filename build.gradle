@@ -1,0 +1,78 @@
+import com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+    }
+}
+
+plugins {
+    id 'org.springframework.boot' version '1.5.6.RELEASE'
+}
+
+allprojects {
+    group = 'codekoenig.reqlogvalve'
+    version = '0.1.0-SNAPSHOT'
+
+    allprojects {
+        gradle.projectsEvaluated {
+            tasks.withType(JavaCompile) {
+                options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+            }
+        }
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        compile 'org.slf4j:slf4j-api:1.7.25'
+        compile 'com.fasterxml.jackson.core:jackson-annotations:2.9.0'
+        compile 'org.apache.tomcat:tomcat-catalina:8.5.20'
+    }
+}
+
+project(':shared') {
+    dependencies {
+        compile 'javax.ws.rs:javax.ws.rs-api:2.0.1'
+    }
+}
+
+project(':capture') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    dependencies {
+        compile project(':shared')
+        runtime group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.25'
+        compile 'commons-io:commons-io:2.5'
+    }
+
+    shadowJar {
+        transform(AppendingTransformer) {
+            resource = 'META-INF/cxf/bus-extensions.txt'
+        }
+    }
+
+    build.finalizedBy(shadowJar)
+}
+
+project(':demowebapp') {
+    // apply plugin: 'org.springframework.boot'
+    apply plugin: 'war'
+
+    dependencies {
+        compile project(':shared')
+        compile 'org.springframework.boot:spring-boot-starter-web:1.5.6.RELEASE'
+        compile 'org.apache.cxf:cxf-spring-boot-starter-jaxrs:3.1.12'
+        compile 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.9.0'
+        compile group: 'org.glassfish.jersey.core', name: 'jersey-client', version: '2.25.1'
+    }
+}
+
